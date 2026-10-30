@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Raleway", ui-sans-serif, system-ui, sans-serif;
+  --font-logo: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --color-page: #f7fcfc;
+  --color-ink: #0b1a1a;
+  --color-pine: #0f2424;
+}
+
+body {
+  @apply bg-page text-ink font-sans antialiased;
+}
