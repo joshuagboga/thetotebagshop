@@ -1,8 +1,8 @@
-const naira = new Intl.NumberFormat('en-NG')
+import { formatNumber } from '../format.js'
 
 export default function ProductCard({ product }) {
   return (
-    <a href="#" className="group block">
+    <a href={`#/product/${product.id}`} className="group block">
       <div className="aspect-[204/222] overflow-hidden bg-neutral-100">
         <img
           src={product.image}
@@ -13,7 +13,7 @@ export default function ProductCard({ product }) {
       </div>
       <div className="mt-6 flex items-center justify-between px-1 text-sm">
         <span>{product.name}</span>
-        <span className="font-logo text-xs font-medium">N{naira.format(product.price)}</span>
+        <span className="font-logo text-xs font-medium">N{formatNumber(product.price)}</span>
       </div>
     </a>
   )

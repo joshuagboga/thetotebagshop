@@ -1,5 +1,6 @@
 import Logo from './Logo.jsx'
 import { CartIcon, UserIcon } from './Icons.jsx'
+import { useCart } from '../CartContext.jsx'
 
 const links = [
   { label: 'Home', href: '#' },
@@ -7,6 +8,8 @@ const links = [
 ]
 
 export default function Navbar() {
+  const { count } = useCart()
+
   return (
     <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-10">
       <nav className="flex gap-6 text-sm uppercase">
@@ -28,10 +31,12 @@ export default function Navbar() {
         <button aria-label="Account" className="hover:opacity-70">
           <UserIcon className="size-6" />
         </button>
-        <button aria-label="Cart" className="relative hover:opacity-70">
+        <a href="#/cart" aria-label={`Cart, ${count} item${count === 1 ? '' : 's'}`} className="relative hover:opacity-70">
           <CartIcon className="size-6" />
-          <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full border border-page bg-ink" />
-        </button>
+          {count > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full border border-page bg-ink" />
+          )}
+        </a>
       </div>
     </header>
   )

@@ -1,52 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Navbar from './components/Navbar.jsx'
 import SearchBar from './components/SearchBar.jsx'
-import CategoryFilter from './components/CategoryFilter.jsx'
-import HeroBanner from './components/HeroBanner.jsx'
-import ProductGrid from './components/ProductGrid.jsx'
-import FeatureSection from './components/FeatureSection.jsx'
 import Footer from './components/Footer.jsx'
-import { availableStock, moreStock, otherStock } from './data/products.js'
+import HomePage from './pages/HomePage.jsx'
+import ProductPage from './pages/ProductPage.jsx'
+import CartPage from './pages/CartPage.jsx'
+import { CartProvider } from './CartContext.jsx'
+import { navigate, useRoute } from './useRoute.js'
 
 export default function App() {
+  const { hash, page, id } = useRoute()
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('All')
 
-  const matches = (products) => {
-    const q = query.trim().toLowerCase()
-    return q ? products.filter((p) => p.alt.toLowerCase().includes(q)) : products
+  // The browser can't scroll to "#shop" while another page is rendered, so
+  // scroll once the new page is in the DOM; real pages start at the top.
+  useEffect(() => {
+    const target = page === 'home' && hash.length > 1 && document.getElementById(hash.slice(1))
+    if (target) target.scrollIntoView()
+    else window.scrollTo(0, 0)
+  }, [hash, page])
+
+  // Searching from a product or the cart takes you back to the results.
+  const search = (value) => {
+    setQuery(value)
+    if (page !== 'home') navigate('shop')
   }
 
   return (
-    <>
+    <CartProvider>
       <Navbar />
 
-      <main className="space-y-16 pb-24">
-        <div className="space-y-7 px-4 pt-6">
-          <SearchBar value={query} onChange={setQuery} />
-          <CategoryFilter active={category} onSelect={setCategory} />
-        </div>
+      <div className="px-4 pt-6 pb-7">
+        <SearchBar value={query} onChange={search} />
+      </div>
 
-        <HeroBanner />
-
-        <ProductGrid
-          id="shop"
-          title="Available Stock"
-          subtitle="These totebags are currently available for sales"
-          products={matches(availableStock)}
-        />
-        <ProductGrid
-          title="Other Stock"
-          subtitle="These totebags are currently available for sales"
-          products={matches(otherStock)}
-        />
-
-        <FeatureSection />
-
-        <ProductGrid products={matches(moreStock)} />
-      </main>
+      {page === 'product' ? (
+        <ProductPage key={id} id={id} />
+      ) : page === 'cart' ? (
+        <CartPage />
+      ) : (
+        <HomePage query={query} />
+      )}
 
       <Footer />
-    </>
+    </CartProvider>
   )
 }
