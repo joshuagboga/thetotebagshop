@@ -57,3 +57,72 @@ export const InstagramIcon = (props) => (
     <circle cx="17.5" cy="6.5" r=".8" fill="currentColor" />
   </svg>
 )
+
+export const TrashIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+  </svg>
+)
+
+export const TruckIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <path d="M3 6h11v10H3zM14 10h4l3 3v3h-7" />
+    <circle cx="7" cy="18" r="1.8" fill="currentColor" />
+    <circle cx="17.5" cy="18" r="1.8" fill="currentColor" />
+  </svg>
+)
+
+export const ChevronDownIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+)
+
+export const PlusIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+
+export const MinusIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <path d="M5 12h14" />
+  </svg>
+)
+
+export const CheckCircleIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m8 12 3 3 5-6" />
+  </svg>
+)
+
+export const InfoIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v6M12 7.5v.5" />
+  </svg>
+)
+
+export const CardIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="M3 10h18M7 15h3" />
+  </svg>
+)
+
+export const CloseIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </svg>
+)
+
+export const StarIcon = (props) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <path
+      d="m12 3 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9l-5.4 2.9 1.1-6.1-4.5-4.3 6.1-.8Z"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
