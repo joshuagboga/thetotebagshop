@@ -1,27 +1,28 @@
 import { useEffect, useState } from 'react'
+import LikeButton from '../components/LikeButton.jsx'
 import ProductGrid from '../components/ProductGrid.jsx'
 import QuantityStepper from '../components/QuantityStepper.jsx'
-import StarRating from '../components/StarRating.jsx'
 import Reviews from '../components/Reviews.jsx'
+import { ErrorMessage, Loading } from '../components/Status.jsx'
 import { CheckCircleIcon, ChevronDownIcon, TruckIcon } from '../components/Icons.jsx'
-import { closures, colors, getProduct, locations, similarProducts } from '../data/products.js'
+import { closures, colors, locations } from '../data/options.js'
 import { useCart } from '../CartContext.jsx'
 import { formatNaira, formatNumber } from '../format.js'
+import { isPurchasable, useProduct, useProductList } from '../useProducts.js'
 import { navigate } from '../useRoute.js'
 
 export default function ProductPage({ id }) {
-  const product = getProduct(id)
-  const { addItem, location, setLocation, deliveryFee } = useCart()
-  const [color, setColor] = useState(colors[0])
-  const [closure, setClosure] = useState(closures.at(-1).label)
-  const [quantity, setQuantity] = useState(1)
-  const [added, setAdded] = useState(false)
+  const { product, status, error, retry } = useProduct(id)
 
-  useEffect(() => {
-    if (!added) return
-    const timer = setTimeout(() => setAdded(false), 2000)
-    return () => clearTimeout(timer)
-  }, [added])
+  if (status === 'loading') return <Loading className="py-32" label="Loading totebag…" />
+
+  if (status === 'error') {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-24 sm:px-10">
+        <ErrorMessage message={error} onRetry={retry} />
+      </main>
+    )
+  }
 
   if (!product) {
     return (
@@ -34,7 +35,36 @@ export default function ProductPage({ id }) {
     )
   }
 
-  const addToCart = () => addItem({ productId: product.id, color, closure, quantity })
+  return <ProductDetails product={product} />
+}
+
+function ProductDetails({ product }) {
+  const { addItem, location, setLocation, deliveryFee, quantityOf } = useCart()
+  const [color, setColor] = useState(colors[0])
+  const [closure, setClosure] = useState(closures.at(-1).label)
+  const [quantity, setQuantity] = useState(1)
+  const [added, setAdded] = useState(false)
+
+  const similar = useProductList({ category: product.category, limit: 9 })
+  const similarProducts = similar.products.filter((p) => p.id !== product.id).slice(0, 8)
+
+  useEffect(() => {
+    if (!added) return
+    const timer = setTimeout(() => setAdded(false), 2000)
+    return () => clearTimeout(timer)
+  }, [added])
+
+  const price = Number(product.price)
+  const inStock = isPurchasable(product)
+  // Units still available once what's already in the cart is counted.
+  const remaining = Math.max(product.stock - quantityOf(product.id), 0)
+  const canAdd = inStock && remaining > 0
+
+  useEffect(() => {
+    if (remaining > 0 && quantity > remaining) setQuantity(remaining)
+  }, [remaining, quantity])
+
+  const addToCart = () => addItem({ product, color, closure, quantity: Math.min(quantity, remaining) })
 
   return (
     <main className="space-y-16 pb-24">
@@ -44,8 +74,9 @@ export default function ProductPage({ id }) {
 
         <div className="mt-5 grid gap-8 md:grid-cols-2 md:gap-3">
           <div>
-            <div className="aspect-[4/3] overflow-hidden border border-neutral-200 bg-neutral-100">
-              <img src={product.image} alt={product.alt} className="size-full object-cover" />
+            <div className="relative aspect-[4/3] overflow-hidden border border-neutral-200 bg-neutral-100">
+              <img src={product.image} alt={product.name} className="size-full object-cover" />
+              <LikeButton product={product} className="absolute top-3 right-3 size-10" />
             </div>
 
             <fieldset className="mt-4">
@@ -99,30 +130,29 @@ export default function ProductPage({ id }) {
           </div>
 
           <div className="md:pl-3">
-            <p className="text-xs">Product</p>
+            <p className="text-xs">{product.category || 'Product'}</p>
             <p className="mt-1 inline-flex items-center gap-2 rounded border border-neutral-300 bg-white px-2 py-1">
               <TruckIcon className="size-5 text-pine" />
               Delivery fee
               <span className="rounded bg-pine px-2 py-0.5 text-[0.65rem] text-white">{formatNumber(deliveryFee)}</span>
             </p>
 
-            <h2 className="mt-4 text-xl font-medium">{product.title}</h2>
-            <div className="mt-2 flex items-center gap-2">
-              <StarRating rating={product.rating} />
-              <span className="rounded border border-neutral-200 bg-white px-1.5 text-sm font-medium">{product.rating}</span>
-            </div>
+            <h2 className="mt-4 text-xl font-medium">{product.name}</h2>
+            <p className={`mt-2 text-xs ${inStock ? 'text-neutral-600' : 'font-medium text-red-700'}`}>
+              {inStock ? `${product.stock} in stock` : 'Out of stock'}
+            </p>
 
             <div className="mt-5 flex items-center gap-4 text-xs">
               <span className="flex items-center gap-2">
                 Price:
                 <span className="rounded border border-neutral-200 bg-white px-2 py-1 font-logo text-sm font-medium">
-                  {formatNaira(product.price)}
+                  {formatNaira(price)}
                 </span>
               </span>
               <span className="h-8 w-0.5 bg-neutral-300" />
               <span className="flex items-center gap-2">
                 Quantity:
-                <QuantityStepper value={quantity} onChange={setQuantity} />
+                <QuantityStepper value={quantity} onChange={setQuantity} max={Math.max(remaining, 1)} />
               </span>
             </div>
 
@@ -131,23 +161,25 @@ export default function ProductPage({ id }) {
             <div className="mt-5 max-w-68 space-y-3">
               <button
                 type="button"
+                disabled={!canAdd}
                 onClick={() => {
                   addToCart()
                   navigate('/cart')
                 }}
-                className="w-full rounded border border-neutral-400 bg-white py-2.5 text-sm hover:bg-neutral-50"
+                className="w-full rounded border border-neutral-400 bg-white py-2.5 text-sm hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Buy Now
               </button>
               <button
                 type="button"
+                disabled={!canAdd}
                 onClick={() => {
                   addToCart()
                   setAdded(true)
                 }}
-                className="w-full rounded bg-pine py-2.5 text-sm text-white hover:bg-pine/85"
+                className="w-full rounded bg-pine py-2.5 text-sm text-white hover:bg-pine/85 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {added ? 'Added to cart ✓' : 'Add to cart'}
+                {added ? 'Added to cart ✓' : !inStock ? 'Out of stock' : remaining === 0 ? 'All stock is in your cart' : 'Add to cart'}
               </button>
             </div>
 
@@ -171,16 +203,18 @@ export default function ProductPage({ id }) {
         </div>
 
         <h3 className="mt-8 text-sm font-semibold">Description</h3>
-        <p className="mt-1 text-xs leading-relaxed text-neutral-700">{product.description}</p>
+        <p className="mt-1 text-xs leading-relaxed whitespace-pre-line text-neutral-700">{product.description}</p>
 
         <Reviews product={product} />
       </section>
 
-      <ProductGrid
-        title="Totebags you may like"
-        subtitle="Similar totebags like the one selected."
-        products={similarProducts(product)}
-      />
+      {similarProducts.length > 0 && (
+        <ProductGrid
+          title="Totebags you may like"
+          subtitle="Similar totebags like the one selected."
+          products={similarProducts}
+        />
+      )}
     </main>
   )
 }

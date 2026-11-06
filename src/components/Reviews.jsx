@@ -42,7 +42,7 @@ export default function Reviews({ product }) {
               </p>
 
               <div className="mt-3 size-28 border border-neutral-200 bg-white p-3">
-                <img src={product.image} alt={`${review.name}’s ${product.title}`} className="size-full object-cover" />
+                <img src={product.image} alt={`${review.name}’s ${product.name}`} className="size-full object-cover" />
               </div>
 
               <p className="mt-3 text-xs leading-relaxed text-neutral-600">{review.text}</p>

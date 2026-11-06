@@ -5,6 +5,10 @@ import Footer from './components/Footer.jsx'
 import HomePage from './pages/HomePage.jsx'
 import ProductPage from './pages/ProductPage.jsx'
 import CartPage from './pages/CartPage.jsx'
+import AuthPage from './pages/AuthPage.jsx'
+import AccountPage from './pages/AccountPage.jsx'
+import AdminPage from './pages/AdminPage.jsx'
+import { AuthProvider } from './AuthContext.jsx'
 import { CartProvider } from './CartContext.jsx'
 import { navigate, useRoute } from './useRoute.js'
 
@@ -27,22 +31,30 @@ export default function App() {
   }
 
   return (
-    <CartProvider>
-      <Navbar />
+    <AuthProvider>
+      <CartProvider>
+        <Navbar />
 
-      <div className="px-4 pt-6 pb-7">
-        <SearchBar value={query} onChange={search} />
-      </div>
+        <div className="px-4 pt-6 pb-7">
+          <SearchBar value={query} onChange={search} />
+        </div>
 
-      {page === 'product' ? (
-        <ProductPage key={id} id={id} />
-      ) : page === 'cart' ? (
-        <CartPage />
-      ) : (
-        <HomePage query={query} />
-      )}
+        {page === 'product' ? (
+          <ProductPage key={id} id={id} />
+        ) : page === 'cart' ? (
+          <CartPage />
+        ) : page === 'login' || page === 'register' ? (
+          <AuthPage key={page} mode={page} redirect={id} />
+        ) : page === 'account' ? (
+          <AccountPage tab={id} />
+        ) : page === 'admin' ? (
+          <AdminPage tab={id} />
+        ) : (
+          <HomePage query={query} />
+        )}
 
-      <Footer />
-    </CartProvider>
+        <Footer />
+      </CartProvider>
+    </AuthProvider>
   )
 }

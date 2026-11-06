@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { DEFAULT_DELIVERY_FEE, closures, getProduct, locations } from './data/products.js'
+import { DEFAULT_DELIVERY_FEE, closures, locations } from './data/options.js'
+import { api } from './api.js'
 
 const STORAGE_KEY = 'thetotebagshop:cart'
 const CartContext = createContext(null)
@@ -12,9 +13,21 @@ const load = () => {
   }
 }
 
+// Only what the cart needs to render; the server re-prices everything at checkout.
+const snapshot = ({ id, name, price, image, stock, status, category }) => ({
+  id,
+  name,
+  price: Number(price),
+  image,
+  stock,
+  status,
+  category,
+})
+
 export function CartProvider({ children }) {
   const [saved] = useState(load)
-  const [items, setItems] = useState(saved.items ?? [])
+  // Carts saved before the shop used the API have no product snapshot; drop them.
+  const [items, setItems] = useState(() => (saved.items ?? []).filter((item) => item.product?.id))
   const [location, setLocation] = useState(saved.location ?? '')
 
   useEffect(() => {
@@ -25,12 +38,14 @@ export function CartProvider({ children }) {
     }
   }, [items, location])
 
-  const addItem = ({ productId, color, closure, quantity }) => {
-    const key = `${productId}-${color}-${closure}`
+  const addItem = ({ product, color, closure, quantity }) => {
+    const key = `${product.id}-${color}-${closure}`
     setItems((current) =>
       current.some((item) => item.key === key)
-        ? current.map((item) => (item.key === key ? { ...item, quantity: item.quantity + quantity } : item))
-        : [...current, { key, productId, color, closure, quantity }],
+        ? current.map((item) =>
+            item.key === key ? { ...item, product: snapshot(product), quantity: item.quantity + quantity } : item,
+          )
+        : [...current, { key, productId: product.id, product: snapshot(product), color, closure, quantity }],
     )
   }
 
@@ -41,16 +56,43 @@ export function CartProvider({ children }) {
 
   const clear = () => setItems([])
 
-  // Drop anything whose product no longer exists in the catalogue.
+  // Refresh prices and stock from the server; drop products that were deleted.
+  const sync = async () => {
+    const ids = [...new Set(items.map((item) => item.productId))]
+    if (!ids.length) return
+    const results = await Promise.all(
+      ids.map((id) =>
+        api
+          .getProduct(id)
+          .then((res) => [id, res.data])
+          .catch((err) => [id, err.status === 404 ? null : undefined]),
+      ),
+    )
+    const fresh = Object.fromEntries(results)
+    setItems((current) =>
+      current
+        .filter((item) => fresh[item.productId] !== null)
+        .map((item) => (fresh[item.productId] ? { ...item, product: snapshot(fresh[item.productId]) } : item)),
+    )
+  }
+
   const lines = items
-    .map((item) => ({ ...item, product: getProduct(item.productId) }))
-    .filter((line) => line.product)
 
   const closureCost = (label) => closures.find((c) => c.label === label)?.cost ?? 0
   const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
   const extras = lines.reduce((sum, line) => sum + closureCost(line.closure) * line.quantity, 0)
   const deliveryFee = locations.find((l) => l.label === location)?.fee ?? DEFAULT_DELIVERY_FEE
   const delivery = lines.length ? deliveryFee : 0
+
+  // One line per product for the API, however many colour/closure variants are in the cart.
+  const checkoutItems = () =>
+    Object.entries(
+      lines.reduce((acc, line) => ({ ...acc, [line.productId]: (acc[line.productId] ?? 0) + line.quantity }), {}),
+    ).map(([id, quantity]) => ({ id, quantity }))
+
+  // Units of a product across all its variants, to keep within stock.
+  const quantityOf = (productId) =>
+    lines.filter((line) => line.productId === productId).reduce((sum, line) => sum + line.quantity, 0)
 
   const value = {
     lines,
@@ -63,6 +105,9 @@ export function CartProvider({ children }) {
     updateQuantity,
     removeItem,
     clear,
+    sync,
+    checkoutItems,
+    quantityOf,
   }
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

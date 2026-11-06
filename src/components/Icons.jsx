@@ -126,3 +126,15 @@ export const StarIcon = (props) => (
     />
   </svg>
 )
+
+export const HeartIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <path d="M12 20s-7.5-4.6-9.3-9.2C1.5 7.6 3.6 4.5 6.9 4.5c2 0 3.6 1.1 5.1 3 1.5-1.9 3.1-3 5.1-3 3.3 0 5.4 3.1 4.2 6.3C19.5 15.4 12 20 12 20Z" />
+  </svg>
+)
+
+export const PencilIcon = (props) => (
+  <svg viewBox="0 0 24 24" {...base} {...props}>
+    <path d="M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4" />
+  </svg>
+)
