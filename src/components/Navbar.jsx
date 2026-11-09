@@ -1,14 +1,19 @@
 import Logo from './Logo.jsx'
 import { CartIcon, UserIcon } from './Icons.jsx'
+import { useAuth } from '../AuthContext.jsx'
 import { useCart } from '../CartContext.jsx'
-
-const links = [
-  { label: 'Home', href: '#' },
-  { label: 'Shop', href: '#shop', active: true },
-]
+import { useRoute } from '../useRoute.js'
 
 export default function Navbar() {
   const { count } = useCart()
+  const { user, isAdmin } = useAuth()
+  const { page } = useRoute()
+
+  const links = [
+    { label: 'Home', href: '#' },
+    { label: 'Shop', href: '#shop', active: page === 'home' || page === 'product' },
+    ...(isAdmin ? [{ label: 'Admin', href: '#/admin', active: page === 'admin' }] : []),
+  ]
 
   return (
     <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-10">
@@ -28,9 +33,14 @@ export default function Navbar() {
       </a>
 
       <div className="flex items-center gap-5">
-        <button aria-label="Account" className="hover:opacity-70">
+        <a
+          href={user ? '#/account' : '#/login'}
+          aria-label={user ? `Account (${user.name})` : 'Sign in'}
+          className="flex items-center gap-1.5 hover:opacity-70"
+        >
           <UserIcon className="size-6" />
-        </button>
+          <span className="hidden text-xs md:inline">{user ? user.name.split(' ')[0] : 'Sign in'}</span>
+        </a>
         <a href="#/cart" aria-label={`Cart, ${count} item${count === 1 ? '' : 's'}`} className="relative hover:opacity-70">
           <CartIcon className="size-6" />
           {count > 0 && (

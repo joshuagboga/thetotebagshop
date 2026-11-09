@@ -1,14 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PaymentModal from '../components/PaymentModal.jsx'
 import QuantityStepper from '../components/QuantityStepper.jsx'
-import StarRating from '../components/StarRating.jsx'
 import { CardIcon, InfoIcon, TrashIcon } from '../components/Icons.jsx'
+import { useAuth } from '../AuthContext.jsx'
 import { useCart } from '../CartContext.jsx'
 import { formatNaira } from '../format.js'
+import { isPurchasable } from '../useProducts.js'
+import { navigate } from '../useRoute.js'
 
 export default function CartPage() {
-  const { lines, totals, updateQuantity, removeItem } = useCart()
+  const { lines, totals, updateQuantity, removeItem, sync, quantityOf } = useCart()
+  const { user } = useAuth()
   const [paying, setPaying] = useState(false)
+
+  // Pick up price or stock changes made since the bags were added.
+  useEffect(() => {
+    sync().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const unavailable = lines.filter(
+    (line) => !isPurchasable(line.product) || quantityOf(line.productId) > line.product.stock,
+  )
+
+  const startCheckout = () => (user ? setPaying(true) : navigate('/login/cart'))
 
   return (
     <main className="mx-auto max-w-6xl px-4 pt-12 pb-24 sm:px-10">
@@ -31,18 +46,28 @@ export default function CartPage() {
                 <a href={`#/product/${line.product.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <img src={line.product.image} alt="" className="size-18 shrink-0 bg-neutral-100 object-cover" />
                   <span className="min-w-0">
-                    <span className="block truncate text-lg hover:underline">{line.product.title}</span>
+                    <span className="block truncate text-lg hover:underline">{line.product.name}</span>
                     <span className="block text-xs text-neutral-500">Closure: {line.closure}</span>
-                    <span className="mt-1 block">
-                      <StarRating rating={line.product.rating} size="sm" />
-                    </span>
                     <span className="mt-1 block text-xs text-neutral-400">
                       Color: <span className="text-ink">{line.color}</span>
                     </span>
+                    {!isPurchasable(line.product) ? (
+                      <span className="mt-1 block text-xs font-medium text-red-700">Out of stock — remove to check out</span>
+                    ) : (
+                      quantityOf(line.productId) > line.product.stock && (
+                        <span className="mt-1 block text-xs font-medium text-red-700">
+                          Only {line.product.stock} left — reduce the quantity
+                        </span>
+                      )
+                    )}
                   </span>
                 </a>
 
-                <QuantityStepper value={line.quantity} onChange={(q) => updateQuantity(line.key, q)} />
+                <QuantityStepper
+                  value={line.quantity}
+                  onChange={(q) => updateQuantity(line.key, q)}
+                  max={Math.max(line.product.stock - (quantityOf(line.productId) - line.quantity), 1)}
+                />
 
                 <span className="w-24 font-logo text-base font-semibold">
                   {formatNaira(line.product.price * line.quantity)}
@@ -51,7 +76,7 @@ export default function CartPage() {
                 <button
                   type="button"
                   onClick={() => removeItem(line.key)}
-                  aria-label={`Remove ${line.product.title} from cart`}
+                  aria-label={`Remove ${line.product.name} from cart`}
                   className="grid size-7 place-items-center rounded bg-pine text-white hover:bg-pine/80"
                 >
                   <TrashIcon className="size-4" />
@@ -80,12 +105,16 @@ export default function CartPage() {
 
             <button
               type="button"
-              onClick={() => setPaying(true)}
-              className="mt-4 flex w-full items-center gap-2 rounded-md bg-pine px-3 py-2.5 text-xs text-white hover:bg-pine/85"
+              onClick={startCheckout}
+              disabled={unavailable.length > 0}
+              className="mt-4 flex w-full items-center gap-2 rounded-md bg-pine px-3 py-2.5 text-xs text-white hover:bg-pine/85 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Payment options
+              {user ? 'Payment options' : 'Sign in to check out'}
               <CardIcon className="size-4" />
             </button>
+            {unavailable.length > 0 && (
+              <p className="mt-2 text-[0.65rem] text-red-700">Some bags are out of stock. Update your cart to continue.</p>
+            )}
           </aside>
         </div>
       )}

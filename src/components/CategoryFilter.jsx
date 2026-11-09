@@ -1,6 +1,6 @@
 import { FilterIcon } from './Icons.jsx'
 
-export const categories = ['All', 'Corduroy', 'Denim', 'Adire', 'Leather']
+import { categories } from '../data/options.js'
 
 export default function CategoryFilter({ active, onSelect }) {
   return (

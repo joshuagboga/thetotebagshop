@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CheckCircleIcon, CloseIcon } from './Icons.jsx'
+import { FormError } from './Status.jsx'
+import { api } from '../api.js'
 import { useCart } from '../CartContext.jsx'
 import { formatNaira } from '../format.js'
 
@@ -30,10 +32,12 @@ const formatExpiry = (value) => {
 }
 
 export default function PaymentModal({ onClose }) {
-  const { totals, clear } = useCart()
+  const { totals, clear, checkoutItems } = useCart()
   const [method, setMethod] = useState('mastercard')
   const [card, setCard] = useState({ number: '', cvv: '', expiry: '' })
-  const [paidTotal, setPaidTotal] = useState(null)
+  const [order, setOrder] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const dialog = useRef(null)
   const closeRef = useRef(onClose)
   closeRef.current = onClose
@@ -49,10 +53,21 @@ export default function PaymentModal({ onClose }) {
     }
   }, [])
 
-  const submit = (e) => {
+  // The API places the order and holds the stock; the card details stay in the
+  // browser because no payment provider is connected yet.
+  const submit = async (e) => {
     e.preventDefault()
-    setPaidTotal(totals.total)
-    clear()
+    setSubmitting(true)
+    setError('')
+    try {
+      const res = await api.checkout(checkoutItems())
+      setOrder({ ...res.data, extras: totals.extras + totals.delivery })
+      clear()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const inputClass =
@@ -75,21 +90,26 @@ export default function PaymentModal({ onClose }) {
           <CloseIcon className="size-5" />
         </button>
 
-        {paidTotal !== null ? (
+        {order ? (
           <div className="text-center">
             <CheckCircleIcon className="mx-auto size-12 text-pine" />
             <h2 id="payment-title" className="mt-4 text-xl font-medium">
               Order placed.
             </h2>
             <p className="mt-2 text-xs text-neutral-600">
-              We received your payment of {formatNaira(paidTotal, true)}. Your totebag will be delivered in three to
-              five working days.
+              Order <span className="font-logo font-medium text-ink">#{order.id.slice(0, 8)}</span> for{' '}
+              {formatNaira(Number(order.totalAmount), true)} has been placed
+              {order.extras > 0 && <> — delivery and closure fees of {formatNaira(order.extras, true)} are paid on delivery</>}
+              . Your totebag will be delivered in three to five working days.
             </p>
             <a
-              href="#shop"
+              href="#/account"
               onClick={onClose}
               className="mt-6 inline-block w-full rounded bg-pine py-3 text-xs text-white hover:bg-pine/85"
             >
+              View my orders
+            </a>
+            <a href="#shop" onClick={onClose} className="mt-3 inline-block text-xs underline hover:opacity-70">
               Continue shopping
             </a>
           </div>
@@ -167,8 +187,16 @@ export default function PaymentModal({ onClose }) {
               </label>
             </div>
 
-            <button type="submit" className="mt-8 w-full rounded bg-pine py-3 text-xs text-white hover:bg-pine/85">
-              Checkout {formatNaira(totals.total, true)}
+            <div className="mt-6">
+              <FormError message={error} />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-2 w-full rounded bg-pine py-3 text-xs text-white hover:bg-pine/85 disabled:opacity-60"
+            >
+              {submitting ? 'Placing your order…' : `Checkout ${formatNaira(totals.total, true)}`}
             </button>
           </form>
         )}
